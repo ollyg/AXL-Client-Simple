@@ -33,9 +33,9 @@ has server => (
 );
 
 sub get_phone {
-    my ($self, $phone_name) = shift;
+    my ($self, $phone_name) = @_;
 
-    my $device = $self->getPhone(phoneName => $phone_name);
+    my $device = $self->getPhone->(phoneName => $phone_name);
     if (exists $device->{'Fault'}) {
         my $f = $device->{'Fault'}->{'faultstring'};
         croak "Fault status returned from server in get_phone: $f\n";

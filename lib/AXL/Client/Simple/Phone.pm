@@ -2,7 +2,6 @@ package AXL::Client::Simple::Phone;
 use Moose;
 
 use AXL::Client::Simple::LineResultSet;
-#use AXL::Client::Simple::Profile;
 use Carp;
 
 has client => (
@@ -38,12 +37,12 @@ sub _build_loginUserId { return (shift)->stash->{loginUserId} }
 
 sub has_active_em {
     my $self = shift;
-    return ($self->has_currentProfileName && $self->has_loginUserId);
+    return ($self->currentProfileName && $self->loginUserId);
 }
 
 has currentProfile => (
     is => 'ro',
-    isa => 'AXL::Client::Simple::Profile',
+    isa => 'AXL::Client::Simple::Phone',
     lazy_build => 1,
 );
 
@@ -51,7 +50,7 @@ sub _build_currentProfile {
     my $self = shift;
     return $self if not $self->has_active_em;
 
-    my $profile = $self->client->getDeviceProfile(
+    my $profile = $self->client->getDeviceProfile->(
         profileName => $self->currentProfileName);
 
     if (exists $profile->{'Fault'}) {
@@ -59,7 +58,7 @@ sub _build_currentProfile {
         croak "Fault status returned from server in _build_currentProfile: $f\n";
     }
 
-    return AXL::Client::Simple::Profile->new({
+    return AXL::Client::Simple::Phone->new({
         client => $self->client,
         stash  => $profile->{'parameters'}->{'return'}->{'profile'},
     });
@@ -75,8 +74,9 @@ sub _build_lines {
     my $self = shift;
 
     my @lines = map { { stash => $_ } }
+                map { defined $_ ? $_ : () }
                 map { $_->{'parameters'}->{'return'}->{'directoryNumber'} }
-                map { $self->client->getLine(uuid => $_) }
+                map { $self->client->getLine->(uuid => $_) }
                 map { $_->{'dirn'}->{'uuid'} }
                     @{ $self->stash->{'lines'}->{'line'} || [] };
 
