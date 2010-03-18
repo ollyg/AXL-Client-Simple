@@ -3,4 +3,4 @@
 use strict;
 use warnings;
 use Test::More tests => 1;
-BEGIN { use_ok( 'EWS::Client' ); }
+BEGIN { use_ok( 'AXL::Client::Simple' ); }
