@@ -2,7 +2,7 @@ package AXL::Client::Simple::Phone;
 use Moose;
 
 use AXL::Client::Simple::LineResultSet;
-use AXL::Client::Simple::Profile;
+#use AXL::Client::Simple::Profile;
 use Carp;
 
 has client => (
@@ -37,6 +37,7 @@ has loginUserId => (
 sub _build_loginUserId { return (shift)->stash->{loginUserId} }
 
 sub has_active_em {
+    my $self = shift;
     return ($self->has_currentProfileName && $self->has_loginUserId);
 }
 

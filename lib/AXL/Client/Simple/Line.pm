@@ -7,7 +7,7 @@ has stash => (
     required => 1,
 );
 
-has => extn (
+has extn => (
     is => 'ro',
     isa => 'Str',
     required => 0,
@@ -16,7 +16,7 @@ has => extn (
 
 sub _build_extn { return (shift)->stash->{pattern} }
 
-has => alertingName (
+has alertingName => (
     is => 'ro',
     isa => 'Str',
     required => 0,
