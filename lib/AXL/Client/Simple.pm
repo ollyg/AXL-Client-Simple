@@ -70,97 +70,106 @@ __END__
 
 =head1 NAME
 
-EWS::Client - Microsoft Exchange Web Services Client
+AXL::Client::Simple - Cisco Unified Communications XML API
 
 =head1 VERSION
 
-This document refers to version 0.04 of EWS::Client
+This document refers to version 0.01 of AXL::Client::Simple
 
 =head1 SYNOPSIS
 
-Set up your Exchange Web Services client:
+Set up your CUCM AXL client:
 
- use EWS::Client;
- use DateTime;
+ use AXL::Client::Simple;
  
- my $ews = EWS::Client->new({
-     server      => 'exchangeserver.example.com',
+ my $cucm = AXL::Client::Simple->new({
+     server      => 'call-manager-server.example.com',
      username    => 'oliver',
-     password    => 's3krit', # or set in $ENV{EWS_PASS}
+     password    => 's3krit', # or set in $ENV{AXL_PASS}
  });
 
-Then perform operations on the Exchange server:
+Then perform simple queries on the Unified Communications server:
 
- my $entries = $ews->calendar->retrieve({
-     start => DateTime->now(),
-     end   => DateTime->now->add( month => 1 ),
- });
+ my $device = $cucm->get_phone('SEP001122334455');
  
- print "I retrieved ". $entries->count ." items\n";
+ my $lines = $device->lines;
+ printf "this device has %s lines.\n", $lines->count;
  
- while ($entries->has_next) {
-     print $entries->next->Subject, "\n";
+ while ($lines->has_next) {
+     my $l = $lines->next;
+     print $l->alertingName, "\n";
+     print $l->extn, "\n";
  }
  
- my $contacts = $ews->contacts->retrieve;
+ if ($device->has_active_em) {
+     # extension mobility is active, so the lines are different
+ 
+     my $profile = $device->currentProfile;
+ 
+     my $profile_lines = $profile->lines;
+     printf "this profile has %s lines.\n", $profile_lines->count;
+ 
+     while ($profile_lines->has_next) {
+         my $l = $profile_lines->next;
+         print $l->alertingName, "\n";
+         print $l->extn, "\n";
+     }
+ }
 
 =head1 DESCRIPTION
 
-This module acts as a client to the Microsoft Exchange Web Services API. From
-here you can access calendar and contact entries in a nicely abstracted
-fashion. Query results are generally available in an iterator and convenience
-methods exist to access the properties of each entry.
+This module acts as a client to the Cisco Unified Communications
+Administrative XML interface (AXL). From here you can perform simple queries
+to retrieve phone device details and in particular the lines active on a
+device.
+
+Although the API is presently very limited, it should be possible to add
+access to additional device and line properties, although performing other AXL
+calls is probably out of scope (hence the module being named Simple).
+
+If the device is running Extension Mobility and a user is logged in, you can
+also retrieve the line details from the current mobility profile active on the
+handset.
 
 =head1 METHODS
 
-=head2 EWS::Client->new( \%arguments )
+=head2 AXL::Client::Simple->new( \%arguments )
 
-Instantiates a new EWS client. There won't be any connection to the server
-until you call one of the calendar or contacts retrieval methods.
+Instantiates a new AXL client. There won't be any connection to the server
+until you call the device retrieval method C<get_phone>. Arguments are:
 
 =over 4
 
-=item C<server> => Fully Qualified Domain Name (required)
+=item C<< server => >> Fully Qualified Domain Name (required)
 
-The host name of the Exchange server to which the module should connect.
+The host name of the CUCM server to which the module should connect. Note that
+the port number 8443 and the path C</axl/> are automatically appended so you
+need only provide the FQDN or IP address.
 
-=item C<username> => String (required)
+=item C<< username => >> String (required)
 
-The account username under which the module will connect to Exchange. This
-value will be URI encoded by the module.
+The account username under which the module will connect to CUCM. This value
+will be URI encoded by the module.
 
-=item C<password> => String OR via C<$ENV{EWS_PASS}> (required)
+=item C<< password => >> String OR via C<$ENV{AXL_PASS}> (required)
 
-The password of the account under which the module will connect to Exchange.
-This value will be URI encoded by the module. You can also provide the
-password via the C<EWS_PASS> environment variable.
+The password of the account under which the module will connect to CUCM.  This
+value will be URI encoded by the module. You can also provide the password via
+the C<AXL_PASS> environment variable.
 
-=item C<schema_path> => String (optional)
+=item C<< schema_path => >> String (optional)
 
-A folder on your file system which contains the WSDL and two further Schema
-files (messages, and types) which describe the Exchange 2007 Web Services SOAP
-API. They are shipped with this module so your providing this is optional.
+A folder on your file system which contains the WSDL and Schema file which
+describe the Administrative XML (AXL) interface. They are shipped with this
+module so your providing this is optional.
 
 =back
 
-=head2 $ews->calendar()
+=head2 C<< $cucm->get_phone( <device-name> ) >>
 
-Retrieves the L<EWS::Client::Calendar> object which allows search and
-retrieval of calendar entries and their various properties. See that linked
-manual page for more details.
-
-=head2 $ews->contacts()
-
-Retrieves the L<EWS::Client::Contacts> object which allows retrieval of
-contact entries and their telephone numbers. See that linked manual page for
-more details.
-
-=head1 TODO
-
-There is currently no handling of time zone information whatsoever. I'm
-waiting for my timezone to shift to UTC+1 in March before working on this, as
-I don't really want to read the Exchange API docs. Patches are welcome if you
-want to help out.
+Retrieves the L<AXL::Client::Simple::Phone> object which reveals a limited
+number of phone properties and details on the active extensions on the
+handset. See that linked manual page for more details.
 
 =head1 REQUIREMENTS
 
@@ -171,12 +180,6 @@ want to help out.
 =item * L<MooseX::Iterator>
 
 =item * L<XML::Compile::SOAP>
-
-=item * L<DateTime>
-
-=item * L<DateTime::Format::ISO8601>
-
-=item * L<HTML::Strip>
 
 =item * L<URI::Escape>
 
