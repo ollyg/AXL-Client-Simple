@@ -4,6 +4,9 @@ use Moose;
 use AXL::Client::Simple::LineResultSet;
 use Carp;
 
+our $VERSION = '0.01';
+$VERSION = eval $VERSION; # numify for warning-free dev releases
+
 has client => (
     is => 'ro',
     isa => 'AXL::Client::Simple',
@@ -91,178 +94,162 @@ __END__
 
 =head1 NAME
 
-EWS::Client::Contacts - Contact Entries from Microsoft Exchange Server
+AXL::Client::Simple::Phone - Properties and Lines on a CUCM Handset
 
 =head1 VERSION
 
-This document refers to version 0.01 of EWS::Client::Contacts
+This document refers to version 0.01 of AXL::Client::Simple::Phone
 
 =head1 SYNOPSIS
 
-First set up your Exchange Web Services client as per L<EWS::Client>:
+First set up your CUCM AXL client as per L<AXL::Client::Simple>:
 
- use EWS::Client;
+ use AXL::Client::Simple;
  
- my $ews = EWS::Client->new({
-     server      => 'exchangeserver.example.com',
+ my $cucm = AXL::Client::Simple->new({
+     server      => 'call-manager-server.example.com',
      username    => 'oliver',
-     password    => 's3krit', # or set in $ENV{EWS_PASS}
+     password    => 's3krit', # or set in $ENV{AXL_PASS}
  });
 
-Then retrieve the contact entries:
+Then perform simple queries on the Unified Communications server:
 
- my $entries = $ews->contacts->retrieve;
- print "I retrieved ". $entries->count ." items\n";
+ my $device = $cucm->get_phone('SEP001122334455');
  
- while ($entries->has_next) {
-     print $entries->next->DisplayName, "\n";
+ my $lines = $device->lines;
+ printf "this device has %s lines.\n", $lines->count;
+ 
+ while ($lines->has_next) {
+     my $l = $lines->next;
+     print $l->alertingName, "\n";
+     print $l->extn, "\n";
+ }
+ 
+ if ($device->has_active_em) {
+     # extension mobility is active, so the lines are different
+ 
+     my $profile = $device->currentProfile;
+ 
+     my $profile_lines = $profile->lines;
+     printf "this profile has %s lines.\n", $profile_lines->count;
+ 
+     while ($profile_lines->has_next) {
+         my $l = $profile_lines->next;
+         print $l->alertingName, "\n";
+         print $l->extn, "\n";
+     }
  }
 
 =head1 DESCRIPTION
 
-This module allows you to retrieve the set of contact entries for a user
-on a Microsoft Exchange server. At present only read operations are supported.
-The results are available in an iterator and convenience methods exist to
-access the properties of each entry.
+This module allows you to retrieve some properties of a device registered with
+a Cisco Unified Communications server, including its line numbers and
+extension mobility profile lines.
 
 =head1 METHODS
 
 =head2 CONSTRUCTOR
 
-=head2 EWS::Client::Contacts->new( \%arguments )
+=head2 AXL::Client::Simple::Phone->new( \%arguments )
 
-You would not normally call this constructor. Use the L<EWS::Client>
+You would not normally call this constructor. Use the L<AXL::Client::Simple>
 constructor instead.
 
-Instantiates a new contacts reader. Note that the action of performing a query
-for a set of results is separated from this step, so you can perform multiple
-queries using this same object. Pass the following arguments in a hash ref:
-
 =over 4
 
-=item C<client> => C<EWS::Client> object (required)
+=item C<< client => >> C<AXL::Client::Simple> object (required)
 
-An instance of C<EWS::Client> which has been configured with your server
-location, user credentials and SOAP APIs. This will be stored as a weak
+An instance of C<AXL::Client::Simple> which has been configured with your
+server location, user credentials and SOAP APIs. This will be stored as a weak
 reference.
 
-=back
+=item C<< stash => >> Hash Ref (required)
 
-=head2 QUERY AND RESULT SET
-
-=head2 $contacts->retrieve( \%arguments )
-
-Query the Exchange server and retrieve contact entries. Pass the following
-arguments in a hash ref:
-
-=over 4
-
-=item C<email> => String (optional)
-
-By default the C<retrieve()> method will return contacts for the account under
-which you authenticated to the Exchange server (that is, the credentials
-passed to the L<EWS::Client> constructor).
-
-Passing the primary SMTP address of another account will retrieve the contacts
-for that Exchange user instead, assuming you have rights to see their
-contacts. If you do not have rights, an error will be thrown.
-
-If you pass one of the account's secondary SMTP addresses this module
-I<should> be able to divine the primary SMTP address required.
+This hash reference contains the raw data returned from the Unified
+Communications server when asked for properties of this device. From this
+stash are retrieved data to construct each property as listed below.
 
 =back
 
-The returned object contains the collection of contact entries and is of type
-C<EWS::Contacts::ResultSet>. It's an iterator, so you can walk through the
-list of entries (see the synposis, above). For example:
+=head2 LINES QUERY AND RESULT SET
 
- my $entries = $contacts->retrieve({email => 'nobody@example.com'});
+=head2 $device->lines
 
-=head2 $entries->next
+Query the Unified Communications server and retrieve phone line details for
+this device. 
 
-Provides the next item in the collection of contact entries, or C<undef> if
-there are no more items to return. Usually used in a loop along with
-C<has_next> like so:
+The returned object contains the ordered collection of phone lines and is of
+type C<AXL::Client::Simple::LineResultSet>. It's an iterator, so you can walk
+through the list of lines (see the synposis, above). For example:
 
- while ($entries->has_next) {
-     print $entries->next->DisplayName, "\n";
+ my $lines = $device->lines;
+
+=head2 $lines->next
+
+Provides the next item in the collection of lines, or C<undef> if there are no
+more items to return. Usually used in a loop along with C<has_next> like so:
+
+ while ($lines->has_next) {
+     print $lines->next->alertingName, "\n";  # the alerting name field from CUCM
+     print $lines->next->extn, "\n";          # the phone line extension number
  }
 
-=head2 $entries->peek
+=head2 $lines->peek
 
 Returns the next item without moving the state of the iterator forward. It
 returns C<undef> if it is at the end of the collection and there are no more
 items to return.
 
-=head2 $entries->has_next
+=head2 $lines->has_next
 
 Returns a true value if there is another entry in the collection after the
 current item, otherwise returns a false value.
 
-=head2 $entries->reset
+=head2 $lines->reset
 
 Resets the iterator's cursor, so you can walk through the entries again from
 the start.
 
-=head2 $entries->count
+=head2 $lines->count
 
-Returns the number of entries returned by the C<retrieve> server query.
+Returns the number of entries returned by the C<lines> server query.
 
-=head2 $entries->items
+=head2 $lines->items
 
-Returns an array ref containing all the entries returned by the C<retrieve>
-server query. They are each objects of type C<EWS::Contacts::Item>.
+Returns an array ref containing all the entries returned by the C<lines>
+server query. They are each objects of type C<AXL::Client::Simple::Line>.
 
-=head2 ITEM PROPERTIES
+=head2 PHONE PROPERTIES
 
-=head2 $item->DisplayName
+=head2 $device->currentProfileName
 
-The field you should use to describe this entry, being probably the person or
-business's name.
+If the device has Extension Mobility enabled and an extension mobility profile
+is active, then its name will be returned by this accessor.
 
-=head2 $item->PhoneNumbers
+=head2 $device->loginUserId
 
-This property comprises all the phone numbers associated with the contact.
+When Extension Mobility is active, you can find out the username of the logged
+in user by querying this property.
 
-An Exchange contact has a number of fields for storing numbers of different
-types, such as Mobile Phone, Business Line, and so on. Each of these may in
-turn store a free text field so people often put multiple numbers in,
-separated by a delimiter.
+=head2 $device->has_active_em
 
-In this property you'll find a hash ref of all this data, with keys being the
-number types (Mobile Phone, etc), and values being array refs of numbers. The
-module splits up number lists but preserves their order. For example:
+To easily find out whether Extension Mobility is active on a live handset, use
+this property which will return a true value if that is the case. Otherwise,
+it returns a false value.
 
- my $numbers = $entry->PhoneNumbers;
- 
- foreach my $type (keys %{ $numbers }) {
- 
-     foreach my $extn (@{ $numbers->{$type} }) {
- 
-         print "$type : $extn \n";
-     }
- }
- 
- # might print something like:
- 
- Oliver Gorwits : 73244
- John Smith : 88888
+=head2 $device->currentProfile
 
-In the future this format may change, or may migrate into an object based
-storage.
-
-=head1 TODO
-
-There should be more properties imported than just the DisplayName and
-PhoneNumbers.
-
-PhoneNumbers will maybe migrate into some kind of object based storage.
+Assuming the device does have Extension Mobility active, then you can grab the
+extension mobility profile details from this property. In fact, what is
+returned is another instance of C<AXL::Client::Simple::Phone> (this module)
+which in turn allows you to access the profile's line numers via C<lines> as
+above.
 
 =head1 SEE ALSO
 
 =over 4
 
-=item * L<http://msdn.microsoft.com/en-us/library/aa580675.aspx>
+=item * L<http://developer.cisco.com/web/axl>
 
 =back
 
