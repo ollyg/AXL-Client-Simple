@@ -96,6 +96,8 @@ REQUIREMENTS
 
     *   XML::Compile::SOAP
 
+    *   XML::Compile::WSDL11
+
     *   URI::Escape
 
     *   File::ShareDir

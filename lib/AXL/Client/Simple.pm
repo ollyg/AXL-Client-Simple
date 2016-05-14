@@ -181,6 +181,8 @@ handset. See that linked manual page for more details.
 
 =item * L<XML::Compile::SOAP>
 
+=item * L<XML::Compile::WSDL11>
+
 =item * L<URI::Escape>
 
 =item * L<File::ShareDir>
