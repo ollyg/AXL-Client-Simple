@@ -11,7 +11,7 @@ use AXL::Client::Simple::Phone;
 use URI::Escape ();
 use Carp;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 $VERSION = eval $VERSION; # numify for warning-free dev releases
 
 has username => (
@@ -74,7 +74,7 @@ AXL::Client::Simple - Cisco Unified Communications XML API
 
 =head1 VERSION
 
-This document refers to version 0.01 of AXL::Client::Simple
+This document refers to version 0.02 of AXL::Client::Simple
 
 =head1 SYNOPSIS
 
